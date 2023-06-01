@@ -75,22 +75,22 @@ def a_star_search(board, start, goal):
 
 
 def a_star_search_modified(board, start, goal):
-    # Check if the path is in the cache
+
     if (start, goal) in path_cache:
         return path_cache[(start, goal)]
 
-    # Check if the path is in the file
+
     if os.path.exists("TEST.pkl"):
         with open("TEST.pkl", "rb") as file:
             file_cache = pickle.load(file)
             if (start, goal) in file_cache:
                 return file_cache[(start, goal)]
 
-    # Otherwise, compute the path and store it in the cache
+
     path = a_star_search(board, start, goal)
     path_cache[(start, goal)] = path
 
-    # Also save it to the file
+
     with open("TEST.pkl", "wb") as file:
         pickle.dump(path_cache, file)
 
@@ -277,7 +277,7 @@ class Window(QtWidgets.QMainWindow):
                         shape_item.sigRegionChangeFinished.connect(shape.move_shape)
                         self.shapes.append(shape)
                         self.plotWidget.addItem(shape_item)
-                        shape_item.setPos(shape_params['center'])  # Set the position of the shape item
+                        shape_item.setPos(shape_params['center'])
 
 
 if __name__ == '__main__':
