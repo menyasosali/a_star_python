@@ -36,14 +36,14 @@ def heuristic(a, b):
     dy = abs(a.y - b.y)
     return dx + dy
 
-def get_neighbors(board, point):
+def get_neighbors(board_array, point):
     neighbors = []
     dx_values = [-1, 0, 1, 0]  # Смещения по оси x
     dy_values = [0, 1, 0, -1]  # Смещения по оси y
 
     for dx, dy in zip(dx_values, dy_values):
         nx, ny = int(point.x + dx), int(point.y + dy)
-        if 0 <= nx < len(board) and 0 <= ny < len(board[0]) and np.isclose(board[nx][ny], 0).any():
+        if 0 <= nx < len(board_array) and 0 <= ny < len(board_array[0]) and np.isclose(board_array[nx][ny], 0).any():
             neighbors.append(Point(nx, ny))
 
     return neighbors
@@ -81,22 +81,22 @@ def a_star_search(board, start, goal):
 
 
 def a_star_search_modified(board, start, goal):
-    # Check if the path is in the cache
+
     if (start, goal) in path_cache:
         return path_cache[(start, goal)]
 
-    # Check if the path is in the file
+
     if os.path.exists("TEST.pkl"):
         with open("TEST.pkl", "rb") as file:
             file_cache = pickle.load(file)
             if (start, goal) in file_cache:
                 return file_cache[(start, goal)]
 
-    # Otherwise, compute the path and store it in the cache
+
     path = a_star_search(board, start, goal)
     path_cache[(start, goal)] = path
 
-    # Also save it to the file
+
     with open("TEST.pkl", "wb") as file:
         pickle.dump(path_cache, file)
 
@@ -238,7 +238,7 @@ class Window(QtWidgets.QMainWindow):
             self.execute_tracing()
 
     def create_points(self):
-        for point in self.uniqpoints:
+        for point in self.all_points:
             self.plotWidget.plot([point.x], [point.y], pen=None, symbol='o')
 
         self.save_points_to_file(self.all_points, "points.pkl")
@@ -255,25 +255,22 @@ class Window(QtWidgets.QMainWindow):
         board_array = np.array(board_image)
         board_array = board_array.reshape(self.board.height(), self.board.width(), 3)
 
-        for point1, point2 in self.points:
+        colors = ['r', 'g', 'b', 'c', 'm', 'y']
+
+        for i, (point1, point2) in enumerate(self.points):
             self.plotWidget.plot([point1.x, point2.x], [point1.y, point2.y], pen=None, symbol='o')
             path = a_star_search_modified(board_array, point1, point2)
             if path is not None:
-                self.plotWidget.plot([point.x for point in path], [point.y for point in path], pen='r')
-
-        for point1, point2 in self.pointsW:
-            self.plotWidget.plot([point1.x, point2.x], [point1.y, point2.y], pen='r')
+                # Use modulo operator to cycle through the colors list
+                color = colors[i % len(colors)]
+                pen = pg.mkPen(color=color, width=2)  # Create a pen with the specified color and width
+                self.plotWidget.plot([point.x for point in path], [point.y for point in path], pen=pen)
 
         for point in self.pointsSolo:
             self.plotWidget.plot([point.x], [point.y], pen=None, symbol='o')
 
-        # Соединить точки из self.points и self.pointsW
-        all_points = self.points + self.pointsW
-        for i in range(len(all_points)):
-            for j in range(i + 1, len(all_points)):
-                path = a_star_search_modified(board_array, all_points[i][1], all_points[j][0])
-                if path is not None:
-                    self.plotWidget.plot([point.x for point in path], [point.y for point in path], pen='r')
+        for point1, point2 in self.pointsW:
+            self.plotWidget.plot([point1.x, point2.x], [point1.y, point2.y], pen='g')
 
     def save_points_to_file(self, points, filename):
         with open(filename, "wb") as file:
@@ -283,10 +280,20 @@ class Window(QtWidgets.QMainWindow):
         with open(filename, "rb") as file:
             points = pickle.load(file)
 
+        self.plotWidget.clear()  # Clear the plot before displaying points
+
         self.stacked_layout.setCurrentWidget(self.plotWidget)
 
-        for point in points:
+        for point1, point2 in self.points:
+            self.plotWidget.plot([point1.x, point2.x], [point1.y, point2.y], pen=None, symbol='o')
+
+        for point1, point2 in self.pointsW:
+            self.plotWidget.plot([point1.x, point2.x], [point1.y, point2.y], pen='r')
+
+        for point in self.pointsSolo:
             self.plotWidget.plot([point.x], [point.y], pen=None, symbol='o')
+
+
 
 
 if __name__ == '__main__':
