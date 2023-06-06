@@ -75,10 +75,8 @@ def a_star_search(board, start, goal):
 
 
 def a_star_search_modified(board, start, goal):
-
     if (start, goal) in path_cache:
         return path_cache[(start, goal)]
-
 
     if os.path.exists("TEST.pkl"):
         with open("TEST.pkl", "rb") as file:
@@ -86,15 +84,41 @@ def a_star_search_modified(board, start, goal):
             if (start, goal) in file_cache:
                 return file_cache[(start, goal)]
 
-
     path = a_star_search(board, start, goal)
     path_cache[(start, goal)] = path
-
 
     with open("TEST.pkl", "wb") as file:
         pickle.dump(path_cache, file)
 
     return path
+
+
+def find_intersections(paths):
+    intersections = []
+    for i in range(len(paths)):
+        for j in range(i + 1, len(paths)):
+            path1 = paths[i]
+            path2 = paths[j]
+            if does_intersect(path1, path2):
+                intersections.append((i, j))
+    return intersections
+
+
+def assign_levels(paths):
+    intersections = find_intersections(paths)
+    levels = [0] * len(paths)
+    for i, j in intersections:
+        levels[j] = max(levels[j], levels[i] + 1)
+    return levels
+
+
+def does_intersect(path1, path2):
+    # Преобразование списков путей в множества для эффективного вычисления пересечений
+    set_path1 = set(path1)
+    set_path2 = set(path2)
+
+    # Если пересечение двух множеств не пустое, то пути пересекаются
+    return len(set_path1.intersection(set_path2)) > 0
 
 
 class Window(QtWidgets.QMainWindow):
@@ -111,6 +135,7 @@ class Window(QtWidgets.QMainWindow):
         self.plotWidget.setYRange(0, 100)
         self.plotWidget.setXRange(0, 100)
 
+        self.paths = []
         self.points = [
             (Point(3, 44), Point(8, 45)),
             (Point(3, 40), Point(3, 32)),
@@ -136,7 +161,6 @@ class Window(QtWidgets.QMainWindow):
             (Point(9, 30), Point(18, 29.5)),
             (Point(18, 29.5), Point(20, 29.5)),
             (Point(20, 29.5), Point(27, 29)),
-            (Point(20, 29.5), Point(33, 18)),
             (Point(14, 38), Point(33, 32)),
             (Point(22, 45), Point(24, 38)),
             (Point(24, 45), Point(27, 33)),
@@ -157,16 +181,20 @@ class Window(QtWidgets.QMainWindow):
         ]
 
         # Define a list of colors for the traces
-        colors = ['r', 'g', 'b', 'c', 'm', 'y']
+        colors = ['g', 'r', 'b', 'y', 'beige']
 
         for i, (point1, point2) in enumerate(self.points):
             self.plotWidget.plot([point1.x, point2.x], [point1.y, point2.y], pen=None, symbol='o')
             path = a_star_search_modified(self.board, point1, point2)
             if path is not None:
-                # Use modulo operator to cycle through the colors list
-                color = colors[i % len(colors)]
-                pen = pg.mkPen(color=color, width=2)  # Create a pen with the specified color and width
-                self.plotWidget.plot([point.x for point in path], [point.y for point in path], pen=pen)
+                self.paths.append(path)
+
+        levels = assign_levels(self.paths)
+        for i, path in enumerate(self.paths):
+            # Use modulo operator to cycle through the colors list
+            color = colors[levels[i] % len(colors)]
+            pen = pg.mkPen(color=color, width=2)  # Create a pen with the specified color and width
+            self.plotWidget.plot([point.x for point in path], [point.y for point in path], pen=pen)
 
         self.pointsW = [
             (Point(3, 20), Point(16.5, 20)),
@@ -183,12 +211,6 @@ class Window(QtWidgets.QMainWindow):
 
         for point in self.pointsSolo:
             self.plotWidget.plot([point.x], [point.y], pen=None, symbol='o')
-
-        delete_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Delete), self)
-        delete_shortcut.activated.connect(self.delete_selected_shapes)
-
-
-
 
 
 if __name__ == '__main__':
